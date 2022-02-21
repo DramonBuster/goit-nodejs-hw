@@ -1,25 +1,53 @@
 const express = require('express')
-
 const router = express.Router()
+const Joi = require('joi')
 
-router.get('/', async (req, res, next) => {
-  res.json({ message: 'template message' })
+const {
+    getList,
+    getById,
+    add,
+    removeById,
+    updateById
+} = require('../../controllers/index')
+
+const controllerWrapper = (controller) => {
+  return async (req, res, next) => {
+    try {
+      await controller(req, res, next)
+    } catch (error) {
+      next(error)
+    }
+  }
+}
+
+const validation = (scheme) => {
+  return (req, res, next) => {
+    const { error } = scheme.validate(req.body)
+    if (error) {
+      error.status = 400
+      next(error)
+      return
+    }
+    next()
+  }
+}
+
+const contactsScheme = Joi.object({
+  name: Joi.string().required(),
+  email: Joi.string().required(),
+  phone: Joi.string().required(),
 })
 
-router.get('/:contactId', async (req, res, next) => {
-  res.json({ message: 'template message' })
-})
+const validateMiddleware = validation(contactsScheme)
 
-router.post('/', async (req, res, next) => {
-  res.json({ message: 'template message' })
-})
+router.get('/', controllerWrapper(getList))
 
-router.delete('/:contactId', async (req, res, next) => {
-  res.json({ message: 'template message' })
-})
+router.get('/:contactId', controllerWrapper(getById))
 
-router.put('/:contactId', async (req, res, next) => {
-  res.json({ message: 'template message' })
-})
+router.post('/', validateMiddleware, controllerWrapper(add))
+
+router.delete('/:contactId', controllerWrapper(removeById))
+
+router.put('/:contactId', validateMiddleware, controllerWrapper(updateById))
 
 module.exports = router
